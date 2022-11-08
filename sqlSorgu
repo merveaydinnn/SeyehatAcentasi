@@ -1,0 +1,265 @@
+	
+	
+---======================================	
+	CREATE TABLE Ulasim(
+	UlasimID smallint identity(1,1) not null,
+	Ad varchar(10) not null,
+	Constraint Pk_Ulasim primary key(UlasimID),
+	CONSTRAINT CK_Ulasim_Ad CHECK(Ad IN ('Gemi', 'Uçak','Tren', 'Otobüs')),	
+	);
+
+
+---======================================	
+CREATE TABLE Firma(
+FirmaID bigint identity(1,1) not null,
+UlasimID smallint not null,
+Ad varchar(50) not null,
+Tel varchar(50) ,
+Constraint Pk_Firma primary key(FirmaID),
+Constraint Fk_Firma_Ulasim foreign key (UlasimID) references Ulasim(UlasimID),
+);
+---======================================	
+
+CREATE TABLE AracBilgi(
+AracID bigint identity(1,1) not null,
+FirmaID bigint not null,
+Kodu varchar(50) ,
+Kapasite smallint ,
+Ozellik varchar(150) ,
+Constraint Pk_AraciBilgi primary key(AracID),
+Constraint Fk_AraciBilgi_Firma foreign key (FirmaID) references Firma(FirmaID),
+);
+
+
+---======================================	
+	CREATE TABLE Sefer(
+	SeferID bigint identity(1,1) not null,
+	AracID bigint not null,
+	Nereden varchar(50) not null,
+	Nereye varchar(50) not null,	
+	Tarih Date not null,	
+	Saat time not null,
+	Fiyat int not null,
+		Constraint Pk_Sefer primary key(SeferID),
+		Constraint Fk_Sefer_AracBilgi foreign key (AracID) references AracBilgi(AracID),
+	
+	
+);
+
+
+CREATE TABLE Koltuk(
+KoltukID int identity(1,1) not null,
+AracID int not null,
+Kodu varchar(50) ,
+Constraint Pk_KoltukID primary key(KoltukID),
+Constraint Fk_Koltuk_Arac foreign key (AracID) references AracBilgi(AracID),
+);
+---======================================	
+CREATE TABLE Indirim(
+IndirimID int identity(1,1) not null,
+Ad varchar(50) not null,
+Yuzde int not null,
+Constraint Pk_Indirim primary key(IndirimID),
+CONSTRAINT CK_Indirim_Ad CHECK(Ad IN ('Bebek' , 'Çocuk','Engellei','Gazi','Şehit Ailesi','Ögrenci','Yetişkin','Yaşlı'))
+);
+Select * from Indirim;
+---======================================	
+CREATE TABLE Yolcu(
+TcKimlikNo int not null,
+IndirimId int ,
+Ad varchar(50) not null,
+Soyad varchar(50) not null,
+Cinsiyet varchar(5)
+Constraint Pk_YolcuID primary key(TcKimlikNo),
+Constraint Fk_Yolcu_Indirim foreign key (IndirimId) references Indirim(IndirimID),
+CONSTRAINT CK_Yolcu_Cinsiyet CHECK(Cinsiyet IN ('Bay', 'Bayan'))
+);
+CREATE INDEX PIndex
+ON Yolcu (Soyad)
+---======================================
+
+CREATE TABLE BiletSatis(
+	BiletSatisID int identity(1,1) not null,
+	YolcuTcKimlikNo int ,
+	SeferID int not null,
+	KoltukID int not null,
+	Tarih date,
+	Saat time
+	Constraint Pk_BiletSatis primary key( BiletSatisID),
+	Constraint Fk_BiletSatis_Yolcu foreign key (YolcuTcKimlikNo) references Yolcu(TckimlikNo),
+	Constraint Fk_BiletSatis_Sefer foreign key (SeferID) references Sefer(SeferID),
+	Constraint Fk_BiletSatis_Koltuk foreign key (KoltukID) references Koltuk(KoltukID),
+	CONSTRAINT uk_PersonID UNIQUE (SeferID,KoltukID)
+		);
+
+
+
+---======================================	
+	CREATE TABLE Kullanici(
+	KullaniciID int not null,
+	KullaniciAd varchar(20) not null,
+	Sifre varchar(256) not null,
+	TamIsım varchar(150) ,
+	CONSTRAINT Pk_Kullanici primary key (KullaniciID),
+		);
+		---======================================	
+-- yetki tablosu
+CREATE TABLE Yetki(
+YetkiID int  not null,
+YetkiAdi varchar(50) not null,
+Aciklama varchar(150) ,
+
+CONSTRAINT Pk_Yetki primary key (YetkiID),
+CONSTRAINT CK_YetkiID CHECK(YetkiAdi IN ('Personel','Müdür','Satiş Danışmanı'))
+);
+Select * from Yetki
+---======================================	
+--kullanıcı yetki tablosu
+
+	CREATE TABLE KullaniciYetki(
+	KullaniciYetkiID int not null,
+	KullaniciID int  not null,
+	YetkiID int not null,
+	CONSTRAINT Pk_KullaniciYetki primary key (KullaniciYetkiID),
+	CONSTRAINT Fk_KullanıcıYetki_Kullanici foreign key (KullaniciID) references Kullanici (KullaniciID),
+	CONSTRAINT fk_KullanıcıYetki_Yetki foreign key (YetkiID) references Yetki (YetkiID),
+	);
+
+
+
+	---====================================== Stored PROCEDURE ============
+Alter PROCEDURE spYolcuEkle(
+	@TcKimlikNo varchar(11),
+	@IndirimID smallint,
+	@Ad varchar(250) ,
+	@Soyad varchar(250) ,
+	@Cinsiyet varchar(5)
+	)
+	AS	
+	BEGIN
+	Insert into Yolcu 
+	Values(@TcKimlikNo,@IndirimID,@Ad,@Soyad,@Cinsiyet)
+	END	
+
+
+---====================================== Stored PROCEDURE BİLET SATIŞ ============
+
+
+
+CREATE PROCEDURE spBiletSatis(
+@YolcuTcKimlikNo int ,
+@SeferID int,
+@KoltukID int,
+@Tarih date,
+@Saat time
+	)
+	AS	
+	BEGIN
+	Insert into BiletSatis
+	Values(@YolcuTcKimlikNo,@SeferID,@KoltukID,@Tarih,@Saat)
+	END	
+---====================================== Stored PROCEDURE KULLANICI GİRİŞ ============
+
+
+
+Alter PROCEDURE spKullaniciGiris(
+@KullaniciID varchar(20) ,
+@Sifre varchar(256)
+	)
+	AS	
+	BEGIN
+	Select * From Kullanici where KullaniciID=@KullaniciID and Sifre=@Sifre
+	END	
+-----==============================================================
+
+Alter PROCEDURE spSeferIslem(
+@Ulasim varchar(10),
+@Nereden varchar(250),
+@Nereye varchar(250),
+@Tarih date
+)
+
+	AS	
+	BEGIN
+	Select S.SeferID , f.Ad,S.Saat,S.Tarih,S.Nereden,S.Nereye,a.Ozellik,S.Fiyat From Sefer as S 	
+	inner join AracBilgi as a on S.AracID=a.AracID
+	inner join Firma as f on a.FirmaID=f.FirmaID
+	inner join Ulasim as u on f.UlasimID=u.UlasimID
+	where U.Ad=@Ulasim  and S.Nereden=@Nereden and S.Nereye=@Nereye and S.Tarih=@Tarih;
+	END	
+
+
+spSeferIslem 'Otobüs','Kayseri','İstanbul','12-26-2015'
+Select * from Indirim
+		
+ ---================================
+ CREATE Procedure spBiletSatisListesi( @TcKimlikNo int )
+AS
+	Select Y.TcKimlikNo,Y.Ad ,Y.Soyad, S.SeferID , F.Ad,S.Saat,S.Tarih,S.Nereden,S.Nereye,a.Ozellik,S.Fiyat, K.KoltukID From Yolcu as Y 	
+	inner join BiletSatis as B on Y.TcKimlikNo=B.YolcuTcKimlikNo
+	inner join Koltuk as K on B.KoltukID=K.KoltukID
+	inner join Sefer as S on  B.SeferID=S.SeferID
+	inner join AracBilgi as A on S.AracID=A.AracID
+	inner join Firma as F on A.FirmaID=F.FirmaID
+	inner join Ulasim as U on F.UlasimID=U.UlasimID	
+	where Y.TcKimlikNo=@TcKimlikNo
+
+CREATE TABLE SystemLog
+(
+	LogID int IDENTITY(1,1),
+	LogDescription varchar(1000),
+	CONSTRAINT PK_SystemLog PRIMARY KEY (LogID)
+)
+CREATE TRIGGER trYolcu
+ON Yolcu
+FOR INSERT
+AS
+BEGIN
+	DECLARE @TcKimlikNo int
+	DECLARE @IndirimID int
+	DECLARE @Ad varchar(50)
+	DECLARE @Soyad varchar(50)
+	DECLARE @Cinsiyet varchar(50)
+	
+
+	SELECT  @TcKimlikNo=TcKimlikNo ,@IndirimID=IndirimID,@Ad=Ad, @Soyad=Soyad,@Cinsiyet=Cinsiyet FROM inserted;
+	
+	INSERT INTO SystemLog (LogDescription) 
+		VALUES ('Yeni bir bilet Satıldı:' +@Ad +' ' +@Soyad); 
+END
+
+CREATE TRIGGER trBiletGuncelle
+ON BiletSatis
+FOR UPDATE
+AS
+BEGIN
+
+
+	DECLARE @KoltukID int
+
+	SELECT @KoltukID = KoltukID FROM deleted;
+
+	INSERT INTO SystemLog (LogDescription) 
+		VALUES ('Bir bilet güncellendi: ' ); 
+END
+CREATE VIEW vwUlasım
+AS
+	SELECT * from Ulasim
+
+
+	CREATE VIEW vwSystemLog
+AS
+	SELECT * from SystemLog
+
+CREATE FUNCTION fnYolcuHitab(
+@Ad varchar(50),
+@Cinsiyet varchar(5))
+RETURNS varchar(100)
+AS
+BEGIN
+	IF @Cinsiyet = 'Bay'
+		RETURN 'Sayin ' + @Ad + ' Bey:';
+	ELSE IF @Cinsiyet = 'Bayan'
+		RETURN 'Sayin ' + @Ad + ' Hanim:';
+	RETURN @Ad
+END
